@@ -1,8 +1,8 @@
 {
-    "name": "counter",
+    "name": "e2_top",
     "includedFiles": [
-        "counter.sv"
+        "../target/e2_top.sv"
     ],
     "constraintsFile": "tangnano9k.cst",
-    "top": "counter"
+    "top": "rtl_e2_top"
 }

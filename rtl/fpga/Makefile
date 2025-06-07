@@ -10,7 +10,7 @@ e2_top.json: ../target/e2_top.sv
 
 # Place and Route
 e2_top_pnr.json: e2_top.json
-	nextpnr-himbaechel --json e2_top.json --write e2_top_pnr.json --freq 27 --device ${DEVICE} --vopt family=${FAMILY} --vopt cst=${BOARD}.cst
+	nextpnr-himbaechel --json e2_top.json --write e2_top_pnr.json --freq 1 --device ${DEVICE} --vopt family=${FAMILY} --vopt cst=${BOARD}.cst
 
 # Generate Bitstream
 e2_top.fs: e2_top_pnr.json
@@ -21,7 +21,7 @@ load: e2_top.fs
 	openFPGALoader -b ${BOARD} e2_top.fs -f
 
 .PHONY: load clean
-.INTERMEDIATE: e2_top_pnr.json e2_top.json
+# .INTERMEDIATE: e2_top_pnr.json e2_top.json
 
 clean:
 	rm -f e2_top.fs e2_top.json e2_top_pnr.json

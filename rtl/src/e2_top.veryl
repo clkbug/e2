@@ -2,9 +2,9 @@ module e2_top #() (
     clk: input  clock   ,
     led: output logic<5>,
 ) {
-    const WAIT_TIME    : logic<24> = 13_500_000;
-    var led_counter  : logic<6> ;
-    var clock_counter: logic<24>;
+    const WAIT_TIME    : u32      = 10_000_000;
+    var led_counter  : logic<6>;
+    var clock_counter: u32     ;
 
     always_ff (clk) {
         clock_counter = clock_counter + 1;
@@ -14,5 +14,5 @@ module e2_top #() (
         }
     }
 
-    assign led = led_counter[4:0];
+    assign led = ~led_counter[4:0];
 }
