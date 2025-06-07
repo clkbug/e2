@@ -1,6 +1,9 @@
 module e2_top #() (
-    clk: input  clock   ,
-    led: output logic<5>,
+    clk: input clock,
+    // rst: input  reset   ,
+    led : output logic<5>,
+    btn1: input  logic<1>,
+    btn2: input  logic<1>,
 ) {
     const WAIT_TIME    : u32      = 10_000_000;
     var led_counter  : logic<6>;
@@ -14,5 +17,14 @@ module e2_top #() (
         }
     }
 
-    assign led = ~led_counter[4:0];
+    inst inst_led: Led #(
+
+
+    ) (
+        clk                    ,
+        rst  : '1              , // '0 for reset, '1 for no reset
+        i_led: led_counter[4:0],
+        o_led: led             ,
+    );
+
 }

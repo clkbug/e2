@@ -5,8 +5,11 @@ DEVICE=GW1NR-LV9QN88PC6/I5
 all: e2_top.fs
 
 # Synthesis
-e2_top.json: ../target/e2_top.sv
-	yosys -p "read_verilog -sv ../target/e2_top.sv; synth_gowin -top rtl_e2_top -json e2_top.json"
+.PHONY: e2_top.json
+e2_top.json: #../rtl.f
+	./gen_yosys.sh yosys.ys ../rtl.f
+	yosys -s yosys.ys
+# yosys -p "read_verilog -sv ../rtl.f; synth_gowin -top rtl_e2_top -json e2_top.json"
 
 # Place and Route
 e2_top_pnr.json: e2_top.json
