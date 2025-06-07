@@ -5,17 +5,29 @@ module e2_top #() (
     btn1: input  logic<1>, // 0: pressed, 1: not pressed
     btn2: input  logic<1>, // 0: pressed, 1: not pressed
 ) {
-    const WAIT_TIME    : u32      = 10_000_000;
-    var led_counter  : logic<6>;
-    var clock_counter: u32     ;
+    const WAIT_TIME    : u32 = 10_000_000;
+    var clock_counter: u32;
+
+    var rd_addr: logic<14>;
+    var rd_data: logic<32>;
+    var wr_addr: logic<14>;
+    var wr_data: logic<32>;
+    var wr_en  : logic<1> ;
 
     always_ff (clk) {
         clock_counter = clock_counter + 1;
-        if (clock_counter == WAIT_TIME) {
+        if (btn1 == '0 || btn2 == '0) {
             clock_counter = 0;
-            led_counter   = led_counter + 1;
-        } else if (btn1 == '0 || btn2 == '0) {
-            led_counter = 0;
+        }
+
+        wr_addr = clock_counter[9:0]; // Use lower bits for address
+        wr_en   = '0;
+        wr_data = clock_counter[9:0]; // ^ clock_counter[19:10]; // Example data manipulation
+
+        if (btn1 == '0) {
+            rd_addr = '0;
+        } else if (btn2 == '0 && clock_counter[20:0] == '0) {
+            rd_addr = rd_addr + 1;
         }
     }
 
@@ -23,10 +35,23 @@ module e2_top #() (
 
 
     ) (
-        clk                    ,
-        rst  : '1              , // '0 for reset, '1 for no reset
-        i_led: led_counter[4:0],
-        o_led: led             ,
+        clk                ,
+        rst  : '1          , // '0 for reset, '1 for no reset
+        i_led: rd_data[4:0],
+        o_led: led         ,
+    );
+
+    inst inst_ram: Ram #(
+        WORD_SIZE    : 32,
+        ADDRESS_WIDTH: 14,
+    ) (
+        clk  ,
+        // rst    : '1,
+        rd_addr  ,
+        rd_data  ,
+        wr_addr  ,
+        wr_data  ,
+        wr_en    , // Write when btn1 is pressed
     );
 
 }

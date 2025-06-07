@@ -1,7 +1,10 @@
-.PHONY: veryl clean format load
+.PHONY: all veryl clean format load
+
+all: veryl
+	${MAKE} -C fpga
+
 veryl:
 	veryl build
-	${MAKE} -C fpga
 
 load: veryl
 	${MAKE} -C fpga load
