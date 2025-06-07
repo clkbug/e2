@@ -3,6 +3,7 @@ rtl/dependencies
 rtl/fpga/*_pnr.json
 rtl/fpga/*.fs
 rtl/fpga/e2_top.json
+rtl/fpga/yosys.ys
 rtl/rtl.f
 rtl/target
 
