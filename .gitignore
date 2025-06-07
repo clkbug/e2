@@ -4,4 +4,5 @@ rtl/fpga/*_pnr.json
 rtl/fpga/*.fs
 rtl/fpga/e2_top.json
 rtl/rtl.f
+rtl/target
 

@@ -20,5 +20,8 @@ e2_top.fs: e2_top_pnr.json
 load: e2_top.fs
 	openFPGALoader -b ${BOARD} e2_top.fs -f
 
-.PHONY: load
+.PHONY: load clean
 .INTERMEDIATE: e2_top_pnr.json e2_top.json
+
+clean:
+	rm -f e2_top.fs e2_top.json e2_top_pnr.json
