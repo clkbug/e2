@@ -2,8 +2,8 @@ module e2_top #() (
     clk: input clock,
     // rst: input  reset   ,
     led : output logic<5>,
-    btn1: input  logic<1>,
-    btn2: input  logic<1>,
+    btn1: input  logic<1>, // 0: pressed, 1: not pressed
+    btn2: input  logic<1>, // 0: pressed, 1: not pressed
 ) {
     const WAIT_TIME    : u32      = 10_000_000;
     var led_counter  : logic<6>;
@@ -14,6 +14,8 @@ module e2_top #() (
         if (clock_counter == WAIT_TIME) {
             clock_counter = 0;
             led_counter   = led_counter + 1;
+        } else if (btn1 == '0 || btn2 == '0) {
+            led_counter = 0;
         }
     }
 
