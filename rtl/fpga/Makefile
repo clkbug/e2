@@ -6,10 +6,10 @@ all: e2_top.fs
 
 # Synthesis
 .PHONY: e2_top.json
-e2_top.json: #../rtl.f
-	./gen_yosys.sh yosys.ys ../rtl.f
+e2_top.json: #../e2_core.f
+	./gen_yosys.sh yosys.ys ../e2_core.f
 	yosys -s yosys.ys
-# yosys -p "read_verilog -sv ../rtl.f; synth_gowin -top rtl_e2_top -json e2_top.json"
+# yosys -p "read_verilog -sv ../e2_core.f; synth_gowin -top rtl_e2_top -json e2_top.json"
 
 # Place and Route
 e2_top_pnr.json: e2_top.json
