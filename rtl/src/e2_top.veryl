@@ -1,9 +1,11 @@
 module e2_top #() (
     clk: input clock,
     // rst: input  reset   ,
-    led : output logic<5>,
-    btn1: input  logic<1>, // 0: pressed, 1: not pressed
-    btn2: input  logic<1>, // 0: pressed, 1: not pressed
+    led    : output logic<5>,
+    btn1   : input  logic<1>, // 0: pressed, 1: not pressed
+    btn2   : input  logic<1>, // 0: pressed, 1: not pressed
+    uart_tx: output logic<1>, // UART transmit
+    uart_rx: input  logic<1>, // UART receive
 ) {
     const WAIT_TIME    : u32 = 10_000_000;
     var clock_counter: u32;
@@ -14,6 +16,7 @@ module e2_top #() (
     var wr_data: logic<32>;
     var wr_en  : logic<1> ;
 
+    assign uart_tx = '1; // UART transmit is not used in this example
     always_ff (clk) {
         clock_counter = clock_counter + 1;
         if (btn1 == '0 || btn2 == '0) {
