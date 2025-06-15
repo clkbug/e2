@@ -12,4 +12,4 @@ while read -r FILE; do
     echo "read_verilog -sv $FILE;"
 done <"${FILE_LIST}" >"${YOSYS_SCRIPT}"
 
-echo "synth_gowin -top rtl_e2_top -json e2_top.json" >>"${YOSYS_SCRIPT}"
+echo "synth_gowin -top e2_core_e2_top -json e2_top.json" >>"${YOSYS_SCRIPT}"

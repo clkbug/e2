@@ -1,6 +1,6 @@
 module e2_top #() (
-    clk: input clock,
-    // rst: input  reset   ,
+    clk    : input  clock   ,
+    rst    : input  reset   ,
     led    : output logic<5>,
     btn1   : input  logic<1>, // 0: pressed, 1: not pressed
     btn2   : input  logic<1>, // 0: pressed, 1: not pressed
@@ -10,27 +10,52 @@ module e2_top #() (
     const WAIT_TIME    : u32 = 10_000_000;
     var clock_counter: u32;
 
-    var rd_addr: logic<14>;
-    var rd_data: logic<32>;
-    var wr_addr: logic<14>;
-    var wr_data: logic<32>;
-    var wr_en  : logic<1> ;
+    const ADDR_WIDTH: u32               = 14;
+    var rd_addr   : logic<ADDR_WIDTH>;
+    var rd_data   : logic<32>        ;
+    var wr_addr   : logic<ADDR_WIDTH>;
+    var wr_data   : logic<32>        ;
+    var wr_en     : logic<1>         ;
 
-    assign uart_tx = '1; // UART transmit is not used in this example
-    always_ff (clk) {
-        clock_counter = clock_counter + 1;
-        if (btn1 == '0 || btn2 == '0) {
-            clock_counter = 0;
+    var tx_ready: logic<1>;
+    var tx_valid: logic<1>;
+    var tx_data : logic<8>;
+
+    always_ff {
+        if_reset {
+            clock_counter = '0;
+            rd_addr       = '0;
+            wr_addr       = '0;
+            wr_data       = '0;
+            wr_en         = '0;
+
+        } else {
+            clock_counter = clock_counter + 1;
+            if (btn1 == '0 || btn2 == '0) {
+                clock_counter = 0;
+            }
+
+            wr_addr = clock_counter[9:0] as ADDR_WIDTH; // Use lower bits for address
+            wr_en   = '0;
+            wr_data = clock_counter[9:0] as 32; // ^ clock_counter[19:10]; // Example data manipulation
+
+            if (btn1 == '0) {
+                rd_addr = '0;
+            }
+
+            if (tx_ready) {
+                rd_addr = rd_addr + 1;
+            }
         }
+    }
 
-        wr_addr = clock_counter[9:0]; // Use lower bits for address
-        wr_en   = '0;
-        wr_data = clock_counter[9:0]; // ^ clock_counter[19:10]; // Example data manipulation
-
-        if (btn1 == '0) {
-            rd_addr = '0;
-        } else if (btn2 == '0 && clock_counter[20:0] == '0) {
-            rd_addr = rd_addr + 1;
+    always_comb {
+        if (tx_ready) {
+            tx_valid = '1;
+            tx_data  = rd_data[7:0];
+        } else {
+            tx_valid = '0;
+            tx_data  = '0;
         }
     }
 
@@ -39,7 +64,7 @@ module e2_top #() (
 
     ) (
         clk                ,
-        rst  : '1          , // '0 for reset, '1 for no reset
+        rst                , // '0 for reset, '1 for no reset
         i_led: rd_data[4:0],
         o_led: led         ,
     );
@@ -48,13 +73,25 @@ module e2_top #() (
         WORD_SIZE    : 32,
         ADDRESS_WIDTH: 14,
     ) (
-        clk  ,
-        // rst    : '1,
+        clk      ,
+        rst      ,
         rd_addr  ,
         rd_data  ,
         wr_addr  ,
         wr_data  ,
         wr_en    , // Write when btn1 is pressed
+    );
+
+    inst uart: Uart #(
+
+
+    ) (
+        clk              ,
+        rst              ,
+        tx      : uart_tx,
+        tx_ready         ,
+        tx_valid         ,
+        tx_data          ,
     );
 
 }

@@ -3,8 +3,8 @@ module Ram #(
     param ADDRESS_WIDTH: u32 = 2,
     // param INIT_FILE   : string = "",
 ) (
-    clk: input clock,
-    // rst    : input  reset               ,
+    clk    : input  clock               ,
+    rst    : input  reset               ,
     rd_addr: input  logic<ADDRESS_WIDTH>,
     rd_data: output logic<WORD_SIZE>    ,
     wr_addr: input  logic<ADDRESS_WIDTH>,

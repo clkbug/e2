@@ -1,0 +1,99 @@
+module Uart #(
+    param DELAY_FRAMES: u32 = 234 - 1,
+    // param DELAY_FRAMES: u32 = 1,
+) (
+    clk: input  clock   ,
+    rst: input  reset   ,
+    tx : output logic<1>, // UART transmit
+    // rx: input  logic<1>, // UART receive
+    // rx_data: output logic<8>, // Received data byte
+    // rx_ready: output logic<1>, // Data ready flag
+    tx_ready: output logic<1>,
+    tx_valid: input  logic<1>,
+    tx_data : input  logic<8>,
+) {
+    enum TxState: logic<2> {
+        IDLE = 0,
+        START = 1,
+        DATA = 2,
+        STOP = 3,
+    }
+
+    var tx_state      : TxState   ;
+    var tx_data_reg   : logic  <8>;
+    var tx_counter    : logic  <8>;
+    var tx_bit_counter: logic  <8>;
+    always_ff {
+        if_reset {
+            tx_state       = TxState::IDLE;
+            tx_counter     = '0;
+            tx_data_reg    = '0;
+            tx_bit_counter = '0;
+        } else {
+            #[cond_type(unique)]
+            case tx_state {
+                TxState::IDLE: {
+                    if tx_counter != '0 {
+                        tx_counter = tx_counter - 1;
+                    }
+                    if tx_valid == '1 && tx_ready {
+                        tx_data_reg = tx_data;
+                        tx_state    = TxState::START;
+                        tx_counter  = DELAY_FRAMES as 8;
+                    }
+                }
+                TxState::START: {
+                    if tx_counter == '0 {
+                        tx_state       = TxState::DATA;
+                        tx_bit_counter = 8'd7;
+                        tx_counter     = DELAY_FRAMES as 8;
+                    } else {
+                        tx_counter = tx_counter - 1;
+                    }
+                }
+                TxState::DATA: {
+                    if tx_counter == '0 {
+                        tx_counter = DELAY_FRAMES as 8;
+                        if tx_bit_counter == '0 {
+                            tx_state = TxState::STOP;
+                        } else {
+                            tx_bit_counter = tx_bit_counter - 1;
+                        }
+                    } else {
+                        tx_counter = tx_counter - 1;
+                    }
+                }
+                TxState::STOP: {
+                    if tx_counter == '0 {
+                        tx_state   = TxState::IDLE;
+                        tx_counter = (DELAY_FRAMES << 2) as 8;
+                    } else {
+                        tx_counter = tx_counter - 1;
+                    }
+                }
+            }
+        }
+    }
+    always_comb {
+        #[cond_type(unique)]
+        case tx_state {
+            TxState::IDLE: {
+                tx_ready = tx_counter == '0;
+                tx       = '1;
+            }
+            TxState::START: {
+                tx_ready = '0;
+                tx       = '0;
+            }
+            TxState::DATA: {
+                tx_ready = '0;
+                tx       = tx_data_reg[7 - tx_bit_counter as 3];
+            }
+            TxState::STOP: {
+                tx_ready = '0;
+                tx       = '1;
+            }
+        }
+
+    }
+}

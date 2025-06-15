@@ -4,5 +4,5 @@
         "../target/e2_top.sv"
     ],
     "constraintsFile": "tangnano9k.cst",
-    "top": "rtl_e2_top"
+    "top": "e2_core_e2_top"
 }
