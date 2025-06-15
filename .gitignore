@@ -7,3 +7,4 @@ rtl/fpga/yosys.ys
 rtl/e2_core.f
 rtl/target
 
+rtl/sim/obj_dir
