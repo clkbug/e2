@@ -45,7 +45,7 @@ public:
         recieving_data = recieving_data & 0xFF;
         recieving = false;
         recieving_bit_counter = 0;
-        printf("%c", this->recieving_data);
+        printf("%c", (int)recieving_data);
         recieving_data = 0;
       }
     }
@@ -93,7 +93,7 @@ main(int argc, char** argv)
     tick++;
 
     if (rst) {
-      printf("%d\tRST\n", tick);
+      fprintf(stderr, "INFO\t%ld\tRST\n", tick);
       continue;
     }
     if (tick % 2 == 0) {
