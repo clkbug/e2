@@ -1,0 +1,156 @@
+package E2 {
+    const AddrWidth   : u32                 = 32;
+    const RamAddrWidth: u32                 = 14;
+    const DataWidth   : u32                 = 32;
+    type Addr         = logic<AddrWidth>   ;
+    type RamAddr      = logic<RamAddrWidth>;
+    type Data         = logic<DataWidth>   ;
+    // type AddrWidth = logic<32>;
+    // type DataWidth = logic<32>;
+
+    enum OpType {
+        OPTYPE_R, // 2 Reg
+        OPTYPE_I, // 1 Reg + Imm
+        OPTYPE_S, // 2 Reg + Imm
+        OPTYPE_B, // Branch
+        OPTYPE_U, // Unconditional Branch (JALR)
+        OPTYPE_J, // Jump (JAL)
+    }
+
+    enum OpCode {
+        OP_INVALID,
+        OP_LUI,
+        OP_AUIPC,
+        OP_JAL,
+        OP_JALR,
+        OP_BEQ,
+        OP_BNE,
+        OP_BLT,
+        OP_BGE,
+        OP_BLTU,
+        OP_BGEU,
+        OP_LB,
+        OP_LH,
+        OP_LW,
+        OP_LBU,
+        OP_LHU,
+        OP_SB,
+        OP_SH,
+        OP_SW,
+        OP_ADDI,
+        OP_SLTI,
+        OP_SLTIU,
+        OP_XORI,
+        OP_ORI,
+        OP_ANDI,
+        OP_SLLI,
+        OP_SRLI,
+        OP_SRAI,
+        OP_ADD,
+        OP_SUB,
+        OP_SLL,
+        OP_SLT,
+        OP_SLTU,
+        OP_XOR,
+        OP_SRL,
+        OP_SRA,
+        OP_OR,
+        OP_AND,
+        OP_FENCE,
+        OP_FENCE_I,
+        OP_ECALL,
+        OP_EBREAK,
+        OP_CSRRW,
+        OP_CSRRS,
+        OP_CSRRC,
+        OP_CSRRWI,
+        OP_CSRRSI,
+        OP_CSRRCI,
+    }
+
+    type LogReg = logic<5>;
+
+    struct OpInfo {
+        t    : OpType    ,
+        code : OpCode    ,
+        rs1  : LogReg    ,
+        rs2  : LogReg    ,
+        rd   : LogReg    ,
+        imm  : logic <32>,
+        shamt: logic <5> ,
+        pc   : logic <32>,
+    }
+
+    enum MemAccessSize {
+        INVALID,
+        BYTE,
+        HALF_WORD,
+        WORD,
+    }
+
+    const TOHOST: logic<32> = 32'h100;
+
+    enum ExceptionCode {
+        INSTRUCTION_ADDRESS_MISALIGNED = 32'h0,
+        INSTRUCTION_ACCESS_FAULT = 32'h1,
+        ILLEGAL_INSTRUCTION = 32'h2,
+        BREAKPOINT = 32'h3,
+        LOAD_ADDRESS_MISALIGNED = 32'h4,
+        LOAD_ACCESS_FAULT = 32'h5,
+        STORE_AMO_ADDRESS_MISALIGNED = 32'h6,
+        STORE_AMO_ACCESS_FAULT = 32'h7,
+        ENVIRONMENT_CALL_FROM_UMODE = 32'h8,
+        ENVIRONMENT_CALL_FROM_SMODE = 32'h9,
+        ENVIRONMENT_CALL_FROM_HMODE = 32'hA,
+        ENVIRONMENT_CALL_FROM_MMODE = 32'hB,
+        INSTRUCTION_PAGE_FAULT = 32'hC,
+        LOAD_PAGE_FAULT = 32'hD,
+        STORE_AMO_PAGE_FAULT = 32'hF,
+        SOFTWARE_INTERRUPT = 32'h80000000,
+        TIMER_INTERRUPT = 32'h80000001,
+        EXTERNAL_INTERRUPT = 32'h80000003,
+    }
+
+    struct ExceptionInfo {
+        code: ExceptionCode    ,
+        mepc: logic        <32>,
+    }
+}
+interface MemReadIf::<AddrWidth: u32 = 32, DataWidth: u32 = 32> {
+    var valid: logic           ;
+    var addr : logic<AddrWidth>;
+    var data : logic<DataWidth>;
+
+    modport ram {
+        valid: input ,
+        addr : input ,
+        data : output,
+    }
+
+    modport user {
+        valid: output,
+        addr : output,
+        data : input ,
+    }
+}
+
+interface MemWriteIf::<AddrWidth: u32 = 32, DataWidth: u32 = 32> {
+    var valid: logic           ;
+    var addr : logic<AddrWidth>;
+    var data : logic<DataWidth>;
+    var ben  : logic<4>        ; // Byte enable
+
+    modport ram {
+        valid: input,
+        addr : input,
+        data : input,
+        ben  : input,
+    }
+
+    modport user {
+        valid: output,
+        addr : output,
+        data : output,
+        ben  : output,
+    }
+}

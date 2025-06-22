@@ -1,3 +1,5 @@
+import E2::*;
+
 module e2_top #() (
     clk    : input  clock   ,
     rst    : input  reset   ,
@@ -10,53 +12,72 @@ module e2_top #() (
     const WAIT_TIME    : u32 = 10_000_000;
     var clock_counter: u32;
 
-    const ADDR_WIDTH: u32               = 14;
-    var rd_addr   : logic<ADDR_WIDTH>;
-    var rd_data   : logic<32>        ;
-    var wr_addr   : logic<ADDR_WIDTH>;
-    var wr_data   : logic<32>        ;
-    var wr_en     : logic<1>         ;
-
-    var tx_ready: logic<1>;
-    var tx_valid: logic<1>;
-    var tx_data : logic<8>;
+    inst if_rd: MemReadIf::<AddrWidth, DataWidth>;
 
     always_ff {
         if_reset {
             clock_counter = '0;
-            rd_addr       = '0;
-            wr_addr       = '0;
-            wr_data       = '0;
-            wr_en         = '0;
 
         } else {
             clock_counter = clock_counter + 1;
             if (btn1 == '0 || btn2 == '0) {
                 clock_counter = 0;
             }
-
-            wr_addr = clock_counter[9:0] as ADDR_WIDTH; // Use lower bits for address
-            wr_en   = '0;
-            wr_data = clock_counter[9:0] as 32; // ^ clock_counter[19:10]; // Example data manipulation
-
-            if (btn1 == '0) {
-                rd_addr = '0;
-            }
-
-            if (tx_ready) {
-                rd_addr = rd_addr + 1;
-            }
         }
     }
 
+    inst core: Core (
+        clk              ,
+        rst              ,
+        if_rd: if_rd.user,
+    );
+
+    inst inst_mem_ctrl: MemCtrl #(
+
+
+    ) (
+        clk      ,
+        rst      ,
+        led      ,
+        btn1     ,
+        btn2     ,
+        uart_tx  ,
+        uart_rx  ,
+
+        if_rd: if_rd.ram,
+    );
+
+}
+
+module MemCtrl #() (
+    clk    : input  clock   ,
+    rst    : input  reset   ,
+    led    : output logic<5>,
+    btn1   : input  logic<1>, // 0: pressed, 1: not pressed
+    btn2   : input  logic<1>, // 0: pressed, 1: not pressed
+    uart_tx: output logic<1>, // UART transmit
+    uart_rx: input  logic<1>, // UART receive
+
+    if_rd: modport MemReadIf::<AddrWidth, DataWidth>::ram,
+) {
+
+    var rd_addr: logic<RamAddrWidth>;
+    var rd_data: logic<DataWidth>   ;
+
+    var tx_ready: logic<1>;
+    var tx_valid: logic<1>;
+    var tx_data : logic<8>;
+
+    always_ff {
+        if_reset {} else {}
+    }
+
     always_comb {
-        if (tx_ready) {
-            tx_valid = '1;
-            tx_data  = rd_data[7:0];
-        } else {
-            tx_valid = '0;
-            tx_data  = '0;
-        }
+        rd_addr    = if_rd.addr[2+:RamAddrWidth];
+        if_rd.data = rd_data;
+
+        tx_valid = '0;
+        tx_data  = '0;
     }
 
     inst inst_led: Led #(
@@ -70,16 +91,16 @@ module e2_top #() (
     );
 
     inst inst_ram: Ram #(
-        WORD_SIZE    : 32,
-        ADDRESS_WIDTH: 14,
+        WORD_SIZE    : DataWidth   ,
+        ADDRESS_WIDTH: RamAddrWidth,
     ) (
-        clk      ,
-        rst      ,
-        rd_addr  ,
-        rd_data  ,
-        wr_addr  ,
-        wr_data  ,
-        wr_en    , // Write when btn1 is pressed
+        clk        ,
+        rst        ,
+        rd_addr    ,
+        rd_data    ,
+        wr_addr: '0,
+        wr_data: '0,
+        wr_en  : '0, // Write when btn1 is pressed
     );
 
     inst uart: Uart #(

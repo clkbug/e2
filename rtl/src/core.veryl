@@ -1,0 +1,33 @@
+import E2::*;
+
+module FetchStage (
+    clk  : input   clock                                  ,
+    rst  : input   reset                                  ,
+    if_rd: modport MemReadIf::<AddrWidth, DataWidth>::user,
+) {
+    var pc: Data;
+
+    always_ff {
+        if_reset {
+            pc = '0;
+        } else {
+            // Increment PC on every clock cycle
+            pc = pc + 4;
+        }
+    }
+
+    assign if_rd.valid = '1;
+    assign if_rd.addr  = pc;
+}
+
+module Core (
+    clk  : input   clock                                  ,
+    rst  : input   reset                                  ,
+    if_rd: modport MemReadIf::<AddrWidth, DataWidth>::user,
+) {
+    inst fetch_stage: FetchStage (
+        clk    ,
+        rst    ,
+        if_rd  ,
+    );
+}
