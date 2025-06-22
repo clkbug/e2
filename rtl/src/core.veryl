@@ -1,33 +1,247 @@
 import E2::*;
 
 module FetchStage (
-    clk  : input   clock                                  ,
-    rst  : input   reset                                  ,
-    if_rd: modport MemReadIf::<AddrWidth, DataWidth>::user,
+    clk                  : input   clock                                  ,
+    rst                  : input   reset                                  ,
+    fetch_mem_interface  : modport MemReadIf::<AddrWidth, DataWidth>::User,
+    fetch_stage_interface: modport FetchStageIF::Fetch                    ,
 ) {
     var pc: Data;
 
     always_ff {
         if_reset {
             pc = '0;
+
+            fetch_stage_interface.pc    = '0;
+            fetch_stage_interface.i     = '0;
+            fetch_stage_interface.valid = '0;
         } else {
-            // Increment PC on every clock cycle
             pc = pc + 4;
+
+            fetch_stage_interface.pc    = pc;
+            fetch_stage_interface.valid = fetch_mem_interface.valid;
+            fetch_stage_interface.i     = fetch_mem_interface.data;
+        }
+
+    }
+
+    always_comb {
+        fetch_mem_interface.valid = '1;
+        fetch_mem_interface.addr  = pc;
+    }
+
+}
+
+module Decoder (
+    i      : input  logic<32>,
+    pc     : input  logic<32>,
+    op_info: output OpInfo,
+    // exception: modport CsrIf::sender    ,
+) {
+    let opcode0: logic<7> = i[0+:7];
+    let rd     : logic<5> = i[7+:5];
+    let funct3 : logic<3> = i[12+:3];
+    let rs1    : logic<5> = i[15+:5];
+    let rs2    : logic<5> = i[20+:5];
+    // let zimm   : logic<5> = rs1; // alias
+    let shamt : logic<5> = rs2; // alias
+    let funct7: logic<7> = i[31:25];
+
+    let immI: logic<12> = i[31:20];
+    let immS: logic<12> = {i[31:25], i[11:7]};
+    let immB: logic<13> = {i[31], i[7], i[30:25], i[11:8], 1'b0};
+    let immU: logic<20> = i[31:12];
+    let immJ: logic<21> = {i[31], i[19:12], i[20], i[30:21], 1'b0};
+
+    always_comb {
+        op_info    = '0;
+        op_info.pc = pc;
+        case opcode0 {
+            7'b0110111: {
+                op_info.t    = OpType::OPTYPE_U;
+                op_info.code = OpCode::OP_LUI;
+            }
+            7'b0010111: {
+                op_info.t    = OpType::OPTYPE_U;
+                op_info.code = OpCode::OP_AUIPC;
+            }
+            7'b1101111: {
+                op_info.t    = OpType::OPTYPE_J;
+                op_info.code = OpCode::OP_JAL;
+            }
+            7'b1100111: case funct3 {
+                3'b000: {
+                    op_info.t    = OpType::OPTYPE_I;
+                    op_info.code = OpCode::OP_JALR;
+                }
+
+                default: {}
+            }
+            7'b1100011: {
+                op_info.t = OpType::OPTYPE_B;
+                case funct3 {
+                    3'b000 : op_info.code = OpCode::OP_BEQ;
+                    3'b001 : op_info.code = OpCode::OP_BNE;
+                    3'b100 : op_info.code = OpCode::OP_BLT;
+                    3'b101 : op_info.code = OpCode::OP_BGE;
+                    3'b110 : op_info.code = OpCode::OP_BLTU;
+                    3'b111 : op_info.code = OpCode::OP_BGEU;
+                    default: {}
+                }
+            }
+            7'b0000011: {
+                op_info.t = OpType::OPTYPE_I;
+                case funct3 {
+                    3'b000 : op_info.code = OpCode::OP_LB;
+                    3'b001 : op_info.code = OpCode::OP_LH;
+                    3'b010 : op_info.code = OpCode::OP_LW;
+                    3'b100 : op_info.code = OpCode::OP_LBU;
+                    3'b101 : op_info.code = OpCode::OP_LHU;
+                    default: {}
+                }
+            }
+            7'b0100011: {
+                op_info.t = OpType::OPTYPE_S;
+                case funct3 {
+                    3'b000 : op_info.code = OpCode::OP_SB;
+                    3'b001 : op_info.code = OpCode::OP_SH;
+                    3'b010 : op_info.code = OpCode::OP_SW;
+                    default: {}
+                }
+            }
+            7'b0010011: {
+                op_info.t = OpType::OPTYPE_I;
+                switch {
+                    funct3 == 3'b000                  : op_info.code = OpCode::OP_ADDI;
+                    funct3 == 3'b010                  : op_info.code = OpCode::OP_SLTI;
+                    funct3 == 3'b011                  : op_info.code = OpCode::OP_SLTIU;
+                    funct3 == 3'b100                  : op_info.code = OpCode::OP_XORI;
+                    funct3 == 3'b110                  : op_info.code = OpCode::OP_ORI;
+                    funct3 == 3'b111                  : op_info.code = OpCode::OP_ANDI;
+                    funct3 == 3'b001 && funct7 == 7'b0: {
+                        op_info.code  = OpCode::OP_SLLI;
+                        op_info.shamt = shamt;
+                    }
+                    funct3 == 3'b101 && funct7 == 7'b0: {
+                        op_info.code  = OpCode::OP_SRLI;
+                        op_info.shamt = shamt;
+                    }
+                    funct3 == 3'b101 && funct7 == 7'b0100000: {
+                        op_info.code  = OpCode::OP_SRAI;
+                        op_info.shamt = shamt;
+                    }
+                    default: {}
+                }
+            }
+            7'b0110011: {
+                op_info.t = OpType::OPTYPE_R;
+                case {funct3, funct7} {
+                    {3'b000, 7'b0}      : op_info.code = OpCode::OP_ADD;
+                    {3'b000, 7'b0100000}: op_info.code = OpCode::OP_SUB;
+                    {3'b001, 7'b0}      : op_info.code = OpCode::OP_SLL;
+                    {3'b010, 7'b0}      : op_info.code = OpCode::OP_SLT;
+                    {3'b011, 7'b0}      : op_info.code = OpCode::OP_SLTU;
+                    {3'b100, 7'b0}      : op_info.code = OpCode::OP_XOR;
+                    {3'b101, 7'b0}      : op_info.code = OpCode::OP_SRL;
+                    {3'b101, 7'b0100000}: op_info.code = OpCode::OP_SRA;
+                    {3'b110, 7'b0}      : op_info.code = OpCode::OP_OR;
+                    {3'b111, 7'b0}      : op_info.code = OpCode::OP_AND;
+                    default             : {}
+                }
+            }
+            default: {}
+            // ToDo: FENCE, FENCE.I
+            // ToDo: ECALL, EBREAK
+            // ToDo: CSRxxx
+        }
+
+        case op_info.t {
+            OpType::OPTYPE_R: {
+                op_info.rd  = rd;
+                op_info.rs1 = rs1;
+                op_info.rs2 = rs2;
+            }
+            OpType::OPTYPE_I: {
+                op_info.rd  = rd;
+                op_info.rs1 = rs1;
+                op_info.imm = {immI[msb] repeat 20, immI};
+            }
+            OpType::OPTYPE_S: {
+                op_info.rs1 = rs1;
+                op_info.rs2 = rs2;
+                op_info.imm = {immS[msb] repeat 20, immS};
+            }
+            OpType::OPTYPE_B: {
+                op_info.rs1 = rs1;
+                op_info.rs2 = rs2;
+                op_info.imm = {immB[msb] repeat 19, immB};
+            }
+            OpType::OPTYPE_U: {
+                op_info.rd  = rd;
+                op_info.imm = {immU[msb] repeat 12, immU};
+            }
+            OpType::OPTYPE_J: {
+                op_info.rd  = rd;
+                op_info.imm = {immJ[msb] repeat 11, immJ};
+            }
+            default: {}
+
+        }
+
+        // exception.valid = op_info.code == OpCode::OP_INVALID;
+        // if exception.valid {
+        //     exception.info.code = ExceptionCode::ILLEGAL_INSTRUCTION;
+        //     exception.info.mepc = pc;
+        // }else {
+        //     exception.info = '0;
+        // }
+    }
+}
+
+module DecodeStage (
+    clk                   : input   clock                ,
+    rst                   : input   reset                ,
+    fetch_stage_interface : modport FetchStageIF::Decode ,
+    decode_stage_interface: modport DecodeStageIF::Decode,
+) {
+    var op_info: OpInfo;
+    inst decoder: Decoder (
+        i      : fetch_stage_interface.i ,
+        pc     : fetch_stage_interface.pc,
+        op_info                          ,
+    );
+
+    always_ff {
+        if_reset {
+            decode_stage_interface.valid   = '0;
+            decode_stage_interface.op_info = '0;
+        } else {
+            decode_stage_interface.valid   = fetch_stage_interface.valid;
+            decode_stage_interface.op_info = op_info;
         }
     }
 
-    assign if_rd.valid = '1;
-    assign if_rd.addr  = pc;
 }
 
 module Core (
-    clk  : input   clock                                  ,
-    rst  : input   reset                                  ,
-    if_rd: modport MemReadIf::<AddrWidth, DataWidth>::user,
+    clk                : input   clock                                  ,
+    rst                : input   reset                                  ,
+    fetch_mem_interface: modport MemReadIf::<AddrWidth, DataWidth>::User,
 ) {
+    inst fetch_stage_interface: FetchStageIF;
     inst fetch_stage: FetchStage (
-        clk    ,
-        rst    ,
-        if_rd  ,
+        clk                    ,
+        rst                    ,
+        fetch_mem_interface    ,
+        fetch_stage_interface  ,
     );
+
+    inst decode_stage_interface: DecodeStageIF;
+    inst decode_stage: DecodeStage (
+        clk                     ,
+        rst                     ,
+        fetch_stage_interface   ,
+        decode_stage_interface  ,
+    );
+
 }

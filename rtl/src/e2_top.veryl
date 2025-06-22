@@ -12,7 +12,7 @@ module e2_top #() (
     const WAIT_TIME    : u32 = 10_000_000;
     var clock_counter: u32;
 
-    inst if_rd: MemReadIf::<AddrWidth, DataWidth>;
+    inst fetch_mem_interface: MemReadIf::<AddrWidth, DataWidth>;
 
     always_ff {
         if_reset {
@@ -27,9 +27,9 @@ module e2_top #() (
     }
 
     inst core: Core (
-        clk              ,
-        rst              ,
-        if_rd: if_rd.user,
+        clk                                          ,
+        rst                                          ,
+        fetch_mem_interface: fetch_mem_interface.User,
     );
 
     inst inst_mem_ctrl: MemCtrl #(
@@ -44,7 +44,7 @@ module e2_top #() (
         uart_tx  ,
         uart_rx  ,
 
-        if_rd: if_rd.ram,
+        fetch_mem_interface: fetch_mem_interface.Ram,
     );
 
 }
@@ -58,7 +58,7 @@ module MemCtrl #() (
     uart_tx: output logic<1>, // UART transmit
     uart_rx: input  logic<1>, // UART receive
 
-    if_rd: modport MemReadIf::<AddrWidth, DataWidth>::ram,
+    fetch_mem_interface: modport MemReadIf::<AddrWidth, DataWidth>::Ram,
 ) {
 
     var rd_addr: logic<RamAddrWidth>;
@@ -73,8 +73,8 @@ module MemCtrl #() (
     }
 
     always_comb {
-        rd_addr    = if_rd.addr[2+:RamAddrWidth];
-        if_rd.data = rd_data;
+        rd_addr                  = fetch_mem_interface.addr[2+:RamAddrWidth];
+        fetch_mem_interface.data = rd_data;
 
         tx_valid = '0;
         tx_data  = '0;

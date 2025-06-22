@@ -116,18 +116,19 @@ package E2 {
         mepc: logic        <32>,
     }
 }
+
 interface MemReadIf::<AddrWidth: u32 = 32, DataWidth: u32 = 32> {
     var valid: logic           ;
     var addr : logic<AddrWidth>;
     var data : logic<DataWidth>;
 
-    modport ram {
+    modport Ram {
         valid: input ,
         addr : input ,
         data : output,
     }
 
-    modport user {
+    modport User {
         valid: output,
         addr : output,
         data : input ,
@@ -140,17 +141,56 @@ interface MemWriteIf::<AddrWidth: u32 = 32, DataWidth: u32 = 32> {
     var data : logic<DataWidth>;
     var ben  : logic<4>        ; // Byte enable
 
-    modport ram {
+    modport Ram {
         valid: input,
         addr : input,
         data : input,
         ben  : input,
     }
 
-    modport user {
+    modport User {
         valid: output,
         addr : output,
         data : output,
         ben  : output,
+    }
+}
+
+interface FetchStageIF {
+    var valid: logic    ;
+    var ready: logic    ;
+    var pc   : logic<32>;
+    var i    : logic<32>; // before decoding
+
+    modport Fetch {
+        pc   : output,
+        i    : output,
+        valid: output,
+        ready: input ,
+    }
+
+    modport Decode {
+        pc   : input ,
+        i    : input ,
+        valid: input ,
+        ready: output,
+    }
+}
+
+interface DecodeStageIF {
+    var valid  : logic     ;
+    var ready  : logic     ;
+    var op_info: E2::OpInfo;
+
+    modport Decode {
+        valid  : output,
+        ready  : input ,
+        op_info: output,
+    }
+
+    modport Execute {
+        valid  : input ,
+        ready  : output,
+        op_info: input ,
     }
 }
