@@ -78,11 +78,12 @@ main(int argc, char** argv)
   UartRx uart_rx;
 
   while (!contextp->gotFinish()) {
-    if (tick > 100) {
+    if (tick == 100) {
       top->btn1 = 1;
       top->btn2 = 1;
       top->rst = 1;
       rst = false;
+      fprintf(stderr, "INFO\t%ld\tRST done\n", tick);
     }
 
     top->clk = !top->clk;
@@ -93,7 +94,6 @@ main(int argc, char** argv)
     tick++;
 
     if (rst) {
-      fprintf(stderr, "INFO\t%ld\tRST\n", tick);
       continue;
     }
     if (tick % 2 == 0) {
